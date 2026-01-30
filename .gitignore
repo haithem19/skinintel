@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+.env
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Large data files (too big for git)
+*.csv
+!webapp/data/temp/README.md
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Docker
+.docker/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables (keep .env.txt as template but ignore secrets)
+.env
+*.env.local
+
+# Airflow
+airflow.cfg
+airflow.db
+airflow-webserver.pid
+
+# Generated SQL (can be regenerated from notebook)
+webapp/sql/seed_products.sql
+webapp/sql/seed_ingredients.sql
+
+# User data (generated at runtime)
+webapp/data/temp/*.json
+webapp/data/results/*.json
+webapp/data/triggers/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/

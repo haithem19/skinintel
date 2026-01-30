@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="flex flex-col h-full">
+
+  <!-- TITLE -->
+  <h2 class="text-xl font-medium text-textmain text-center mb-2">
+    Tell us about your skin
+  </h2>
+
+  <p class="text-sm text-gray-500 text-center mb-6">
+    This information helps us personalize the analysis
+  </p>
+
+  <!-- FORM -->
+  <form method="POST" class="flex flex-col flex-1 space-y-6" id="analysisForm">
+
+    <!-- SKIN TYPE -->
+    <div>
+      <label class="block text-sm mb-2 text-gray-600">
+        Skin type
+      </label>
+
+      <select
+        name="skinType"
+        required
+        class="w-full p-4 rounded-2xl border bg-white"
+      >
+        <option value="" disabled selected>
+          Select your skin type
+        </option>
+        <option value="normal">Normal</option>
+        <option value="dry">Dry</option>
+        <option value="oily">Oily</option>
+        <option value="combination">Combination</option>
+        <option value="sensitive">Sensitive</option>
+      </select>
+    </div>
+
+    <!-- SKIN CONCERNS -->
+    <div>
+      <label class="block text-sm mb-3 text-gray-600">
+        Skin concerns (you can choose more than one)
+      </label>
+
+      <div class="grid grid-cols-2 gap-3">
+
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" name="skinConcerns" value="acne">
+          <span>Acne</span>
+        </label>
+
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" name="skinConcerns" value="dark_spots">
+          <span>Dark spots</span>
+        </label>
+
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" name="skinConcerns" value="aging">
+          <span>Aging / wrinkles</span>
+        </label>
+
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" name="skinConcerns" value="uneven_texture">
+          <span>Uneven texture</span>
+        </label>
+
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" name="skinConcerns" value="dehydration">
+          <span>Dehydration</span>
+        </label>
+
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" name="skinConcerns" value="redness">
+          <span>Redness</span>
+        </label>
+
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" name="skinConcerns" value="dullness">
+          <span>Dullness</span>
+        </label>
+
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" name="skinConcerns" value="sensitivity">
+          <span>Sensitivity</span>
+        </label>
+
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" name="skinConcerns" value="large_pores">
+          <span>Large pores</span>
+        </label>
+
+        <label class="flex items-center space-x-2">
+          <input type="checkbox" name="skinConcerns" value="dryness">
+          <span>Dryness</span>
+        </label>
+
+      </div>
+    </div>
+
+    <!-- ✨ NOUVEAU : PRIMARY GOAL (optionnel) -->
+    <div>
+      <label class="block text-sm mb-2 text-gray-600">
+        Primary goal <span class="text-gray-400">(optional)</span>
+      </label>
+
+      <input
+        type="text"
+        name="primaryGoal"
+        placeholder="e.g., anti_aging, hydration"
+        class="w-full p-4 rounded-2xl border bg-white text-sm"
+      >
+    </div>
+
+    <!-- ✨ DETECTED PRODUCTS FROM OCR -->
+    {% if scanned_products %}
+    <div class="bg-green-50 border border-green-200 rounded-2xl p-4">
+      <label class="block text-sm mb-3 text-green-700 font-medium">
+        ✓ {{ scanned_products|length }} product(s) detected from your images
+      </label>
+      <div class="space-y-3">
+        {% for product in scanned_products %}
+        <div class="bg-white rounded-xl p-3 border border-green-100">
+          <p class="font-medium text-green-800 text-sm mb-1">📦 {{ product.productName }}</p>
+          <div class="flex flex-wrap gap-1">
+            {% for ing in product.ingredients[:5] %}
+            <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">
+              {{ ing }}
+            </span>
+            {% endfor %}
+            {% if product.ingredients|length > 5 %}
+            <span class="text-green-600 text-xs">+{{ product.ingredients|length - 5 }} more</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% elif detected_ingredients %}
+    <div class="bg-green-50 border border-green-200 rounded-2xl p-4">
+      <label class="block text-sm mb-2 text-green-700 font-medium">
+        ✓ Detected ingredients from your images
+      </label>
+      <div class="flex flex-wrap gap-2">
+        {% for ing in detected_ingredients %}
+        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+          {{ ing }}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if ocr_error %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
+      <p class="text-sm text-yellow-700">
+        ⚠️ Could not extract ingredients: {{ ocr_error }}
+      </p>
+    </div>
+    {% endif %}
+
+    <!-- MANUAL INGREDIENTS INPUT -->
+    <div>
+      <label class="block text-sm mb-2 text-gray-600">
+        Add ingredients manually <span class="text-gray-400">(optional)</span>
+      </label>
+      <input
+        type="text"
+        id="manualIngredientInput"
+        placeholder="e.g., niacinamide, retinol"
+        class="w-full p-4 rounded-2xl border bg-white text-sm"
+      >
+      <div id="manualIngredientsList" class="flex flex-wrap gap-2 mt-2"></div>
+    </div>
+
+    <!-- ✨ SUBMIT avec LOADING -->
+    <button
+      type="submit"
+      id="submitBtn"
+      class="w-full bg-primary text-white py-4 rounded-full mt-auto transition-opacity"
+    >
+      <span id="btnText">Continue</span>
+      <span id="btnLoading" class="hidden">
+        <div class="flex items-center justify-center space-x-2">
+          <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Analyzing...</span>
+        </div>
+      </span>
+    </button>
+
+  </form>
+
+</div>
+
+<!-- ✨ SCRIPT LOADING + MANUAL INGREDIENTS -->
+<script>
+  // Form submit loading
+  document.getElementById('analysisForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    document.getElementById('btnText').classList.add('hidden');
+    document.getElementById('btnLoading').classList.remove('hidden');
+    btn.disabled = true;
+    btn.classList.add('opacity-50', 'cursor-not-allowed');
+  });
+
+  // Manual ingredient input
+  const manualIngredients = [];
+  const input = document.getElementById('manualIngredientInput');
+  const list = document.getElementById('manualIngredientsList');
+
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const value = input.value.trim().toLowerCase().replace(',', '');
+      if (value && !manualIngredients.includes(value)) {
+        manualIngredients.push(value);
+        renderIngredients();
+      }
+      input.value = '';
+    }
+  });
+
+  function renderIngredients() {
+    list.innerHTML = '';
+    manualIngredients.forEach((ing, i) => {
+      const span = document.createElement('span');
+      span.className = 'bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-1';
+      span.innerHTML = `
+        ${ing}
+        <button type="button" onclick="removeIngredient(${i})" class="ml-1 text-blue-600 hover:text-blue-800">×</button>
+        <input type="hidden" name="manualIngredients" value="${ing}">
+      `;
+      list.appendChild(span);
+    });
+  }
+
+  function removeIngredient(index) {
+    manualIngredients.splice(index, 1);
+    renderIngredients();
+  }
+</script>
+
+{% endblock %}

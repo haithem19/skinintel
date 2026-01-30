@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>SkinIntel</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/clipboard.ico') }}">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Theme config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#A2A87B',
+            background: '#F7F5F0',
+            textmain: '#1C1C1C'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-background min-h-screen flex justify-center items-center">
+
+  <!-- MOBILE APP CONTAINER -->
+  <div class="w-[390px] min-h-[780px] bg-background rounded-[32px] p-6">
+
+    {% block content %}{% endblock %}
+
+  </div>
+
+</body>
+</html>

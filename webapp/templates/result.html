@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="flex flex-col h-full overflow-y-auto">
+
+  <h2 class="text-xl font-medium mb-6 text-textmain">
+    Your skin analysis
+  </h2>
+
+  {% if error %}
+    <!-- ERREUR -->
+    <div class="bg-red-50 border border-red-200 p-4 rounded-2xl mb-4">
+      <p class="text-red-700">❌ {{ error }}</p>
+    </div>
+  {% elif results %}
+    <!-- RÉSULTATS -->
+    <div class="space-y-4">
+      
+      <!-- CONFLITS -->
+      <div class="bg-white p-4 rounded-2xl">
+        <h3 class="font-medium mb-2">⚠️ Conflicts ({{ results.conflicts.count }})</h3>
+        {% if results.conflicts.hasConflicts %}
+          {% for c in results.conflicts.details %}
+            <div class="text-sm text-gray-600 mb-2">
+              <strong>{{ c.ingredientA }}</strong> × <strong>{{ c.ingredientB }}</strong>
+              <br><span class="text-xs">{{ c.recommendation }}</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-sm text-green-600">✅ No conflicts detected</p>
+        {% endif %}
+      </div>
+
+      <!-- REDONDANCES -->
+      <div class="bg-white p-4 rounded-2xl">
+        <h3 class="font-medium mb-2">🔄 Redundancies ({{ results.redundancy.count }})</h3>
+        {% if results.redundancy.hasRedundancy %}
+          {% for r in results.redundancy.details %}
+            <div class="text-sm text-gray-600 mb-2">
+              {{ r.displayName or r.effectLabel }} ({{ r.count }}×)
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-sm text-green-600">✅ No redundancies</p>
+        {% endif %}
+      </div>
+
+      <!-- SUGGESTIONS -->
+      <div class="bg-white p-4 rounded-2xl">
+        <h3 class="font-medium mb-2">✨ Suggestions ({{ results.suggestions.count }})</h3>
+        {% for s in results.suggestions.details %}
+          <div class="text-sm text-gray-600 mb-2">
+            <strong>{{ s.keyIngredientLabel }}</strong> ({{ s.productType }})
+            <br><span class="text-xs">{{ s.reason }}</span>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- ROUTINE MATIN -->
+      <div class="bg-white p-4 rounded-2xl">
+        <h3 class="font-medium mb-2">☀️ Morning Routine</h3>
+        {% for step in results.routines.morning %}
+          <div class="text-sm text-gray-600 mb-1">
+            {{ step.order }}. {{ step.productName }}
+            {% if step.isSuggestion %}<span class="text-green-600">✨</span>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- ROUTINE SOIR -->
+      <div class="bg-white p-4 rounded-2xl">
+        <h3 class="font-medium mb-2">🌙 Evening Routine</h3>
+        {% for step in results.routines.evening %}
+          <div class="text-sm text-gray-600 mb-1">
+            {{ step.order }}. {{ step.productName }}
+          </div>
+        {% endfor %}
+      </div>
+
+    </div>
+  {% else %}
+    <!-- PAS DE RÉSULTATS -->
+    <div class="bg-gray-50 p-4 rounded-2xl">
+      <p class="text-gray-600">No results available</p>
+    </div>
+  {% endif %}
+
+  <!-- BOUTON RETOUR -->
+  <a href="/" class="block mt-8">
+    <button class="w-full bg-primary text-white py-4 rounded-full">
+      Start again
+    </button>
+  </a>
+
+</div>
+
+{% endblock %}

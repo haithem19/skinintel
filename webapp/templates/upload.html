@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="flex flex-col items-center mt-16 space-y-6">
+
+  <!-- TITLE -->
+  <h1 class="text-4xl font-semibold text-center text-textmain">
+    Find skincare that works
+  </h1>
+
+  <p class="text-lg text-gray-500 text-center">
+    See what's inside any product
+  </p>
+
+  <!-- MAIN CARD (SkinSort style) -->
+  <form
+    method="POST"
+    enctype="multipart/form-data"
+    id="uploadForm"
+    class="w-full max-w-2xl bg-white rounded-3xl shadow-sm p-6 mt-6"
+  >
+
+    <!-- UPLOAD AREA -->
+    <label
+      for="images"
+      class="flex items-center space-x-3 cursor-pointer"
+    >
+      <div class="flex items-center justify-center w-10 h-10 rounded-full border">
+        📷
+      </div>
+
+      <span class="text-gray-600 text-lg">
+        Upload ingredient images
+      </span>
+
+      <input
+        id="images"
+        type="file"
+        accept="image/*"
+        multiple
+        class="hidden"
+        onchange="handleFiles(this.files)"
+      >
+    </label>
+
+    <!-- EMPTY STATE -->
+    <p
+      id="emptyState"
+      class="text-sm text-gray-400 mt-4"
+    >
+      No image selected yet
+    </p>
+
+    <!-- PREVIEW -->
+    <div
+      id="preview"
+      class="grid grid-cols-4 gap-3 mt-4"
+    ></div>
+
+  </form>
+
+  <!-- CONTINUE BUTTON -->
+  <button
+    type="submit"
+    form="uploadForm"
+    id="submitBtn"
+    class="bg-primary text-white px-10 py-4 rounded-full text-lg mt-6"
+  >
+    Continue
+  </button>
+
+  <!-- LOADING INDICATOR -->
+  <div id="loadingIndicator" class="hidden mt-4">
+    <div class="flex items-center space-x-2">
+      <svg class="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span class="text-gray-600">Analyzing ingredients with OCR...</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- SCRIPT -->
+<script>
+let selectedFiles = [];
+
+function handleFiles(files) {
+  const preview = document.getElementById("preview");
+  const emptyState = document.getElementById("emptyState");
+
+  Array.from(files).forEach(file => {
+    if (selectedFiles.some(f => f.name === file.name)) return;
+
+    selectedFiles.push(file);
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.createElement("img");
+      img.src = e.target.result;
+      img.className =
+        "w-full h-20 object-cover rounded-xl border";
+
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  if (selectedFiles.length > 0) {
+    emptyState.style.display = "none";
+  }
+
+  document.getElementById("images").value = "";
+}
+
+// inject files on submit
+document.getElementById("uploadForm").addEventListener("submit", function (e) {
+  const form = this;
+  const submitBtn = document.getElementById("submitBtn");
+  const loadingIndicator = document.getElementById("loadingIndicator");
+
+  // Show loading state
+  submitBtn.disabled = true;
+  submitBtn.classList.add("opacity-50", "cursor-not-allowed");
+  submitBtn.textContent = "Processing...";
+  loadingIndicator.classList.remove("hidden");
+
+  selectedFiles.forEach(file => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.name = "ingredients_images";
+    input.files = createFileList(file);
+    input.hidden = true;
+    form.appendChild(input);
+  });
+});
+
+function createFileList(file) {
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  return dt.files;
+}
+</script>
+
+{% endblock %}

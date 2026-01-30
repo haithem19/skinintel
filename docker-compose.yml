@@ -1,0 +1,162 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: skincare-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-airflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airflow}
+      POSTGRES_DB: ${POSTGRES_DB:-airflow}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+      # Initialize app demo table (active_ingredients_database)
+      - ./sql/init_database.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-airflow}"]
+      interval: 10s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - skincare-network
+
+  airflow-webserver:
+    image: apache/airflow:2.9.3
+    container_name: skincare-airflow-webserver
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__API__AUTH_BACKENDS: ${AIRFLOW__API__AUTH_BACKENDS:-airflow.api.auth.backend.basic_auth}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY:-skincare_secret_key_2026_secure}
+      AIRFLOW__CORE__EXECUTOR: ${AIRFLOW__CORE__EXECUTOR:-LocalExecutor}
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN:-postgresql+psycopg2://airflow:airflow@postgres:5432/airflow}
+      AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES:-false}
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: ${AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION:-true}
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: ${AIRFLOW__CORE__DEFAULT_TIMEZONE:-UTC}
+
+      # Make scraper DAG imports stable in-container
+      SCRAPER_PROJECT_ROOT: /opt/airflow/scraper
+
+      # Install extra python deps into the Airflow image at runtime
+      _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-postgres pandas psycopg2-binary beautifulsoup4 requests lxml"
+
+      # DB access for scraper scripts
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://airflow:airflow@postgres:5432/airflow}
+
+      # Admin bootstrap
+      AIRFLOW_ADMIN_USER: ${AIRFLOW_ADMIN_USER:-admin}
+      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-admin}
+      AIRFLOW_ADMIN_EMAIL: ${AIRFLOW_ADMIN_EMAIL:-admin@example.com}
+
+    volumes:
+      # Only DAG folders go under /opt/airflow/dags
+      - ./scraper/dags:/opt/airflow/dags/scraper:ro
+      - ./webapp/dags:/opt/airflow/dags/webapp:ro
+
+      # Full scraper project (scripts/utils) available for imports
+      - ./scraper:/opt/airflow/scraper:ro
+
+      # Plugins used by webapp DAG
+      - ./webapp/plugins:/opt/airflow/plugins:ro
+
+      # Shared data + logs
+      - ./webapp/data:/opt/airflow/data
+      - ./webapp/logs:/opt/airflow/logs
+
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create \
+        --username ${AIRFLOW_ADMIN_USER:-admin} \
+        --password ${AIRFLOW_ADMIN_PASSWORD:-admin} \
+        --firstname Admin \
+        --lastname User \
+        --role Admin \
+        --email ${AIRFLOW_ADMIN_EMAIL:-admin@example.com} || true &&
+      airflow webserver
+      "
+    restart: unless-stopped
+    networks:
+      - skincare-network
+
+  airflow-scheduler:
+    image: apache/airflow:2.9.3
+    container_name: skincare-airflow-scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__API__AUTH_BACKENDS: ${AIRFLOW__API__AUTH_BACKENDS:-airflow.api.auth.backend.basic_auth}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY:-skincare_secret_key_2026_secure}
+      AIRFLOW__CORE__EXECUTOR: ${AIRFLOW__CORE__EXECUTOR:-LocalExecutor}
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN:-postgresql+psycopg2://airflow:airflow@postgres:5432/airflow}
+      AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES:-false}
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: ${AIRFLOW__CORE__DEFAULT_TIMEZONE:-UTC}
+
+      SCRAPER_PROJECT_ROOT: /opt/airflow/scraper
+      _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-postgres pandas psycopg2-binary beautifulsoup4 requests lxml"
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://airflow:airflow@postgres:5432/airflow}
+
+    volumes:
+      - ./scraper/dags:/opt/airflow/dags/scraper:ro
+      - ./webapp/dags:/opt/airflow/dags/webapp:ro
+      - ./scraper:/opt/airflow/scraper:ro
+      - ./webapp/plugins:/opt/airflow/plugins:ro
+      - ./webapp/data:/opt/airflow/data
+      - ./webapp/logs:/opt/airflow/logs
+
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow scheduler
+      "
+    restart: unless-stopped
+    networks:
+      - skincare-network
+
+  flask-app:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    container_name: skincare-flask-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-webserver:
+        condition: service_started
+      airflow-scheduler:
+        condition: service_started
+    environment:
+      FLASK_ENV: ${FLASK_ENV:-production}
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:-skintel_secret_key_2026}
+
+      # Flask -> Airflow API
+      AIRFLOW_URL: ${AIRFLOW_URL:-http://airflow-webserver:8080}
+      AIRFLOW_USER: ${AIRFLOW_USER:-admin}
+      AIRFLOW_PASSWORD: ${AIRFLOW_PASSWORD:-admin}
+
+      # Shared folder with Airflow (/opt/airflow/data)
+      APP_DATA_DIR: ${APP_DATA_DIR:-/app/data}
+
+    volumes:
+      - ./webapp:/app
+      - ./webapp/data:/app/data
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    networks:
+      - skincare-network
+
+volumes:
+  postgres-db-volume:
+    driver: local
+
+networks:
+  skincare-network:
+    driver: bridge

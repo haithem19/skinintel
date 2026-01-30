@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+venv/
+env/
+
+# Airflow
+logs/
+airflow.db
+airflow-webserver.pid
+
+# Données temporaires
+data/temp/*
+!data/temp/.gitkeep
+!data/temp/README.md
+
+data/triggers/*
+!data/triggers/.gitkeep
+
+data/results/*
+!data/results/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Docker
+postgres-db-volume/
+
+# Environment
+.env

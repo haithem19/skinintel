@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="flex flex-col items-center justify-center mt-20 space-y-6">
+
+  <!-- LOGO -->
+  <img
+    src="{{ url_for('static', filename='images/logo.png') }}"
+    alt="SkinIntel logo"
+    class="w-55 h-55 object-contain"
+  >
+
+  <!-- TITLE -->
+  <h1 class="text-4xl font-semibold text-center text-textmain">
+    Find skincare that works
+  </h1>
+
+  <!-- SUBTITLE -->
+  <p class="text-lg text-gray-500 text-center max-w-md">
+    Analyze skincare ingredients and understand what really works for your skin.
+  </p>
+
+  <!-- CTA -->
+  <a href="/upload">
+    <button class="bg-primary text-white px-10 py-4 rounded-full text-lg mt-4">
+      Start analysis
+    </button>
+  </a>
+
+</div>
+
+{% endblock %}
