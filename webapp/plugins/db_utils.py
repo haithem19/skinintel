@@ -5,6 +5,7 @@ Gère les requêtes vers la table active_ingredients_database et products_dim
 """
 import psycopg2
 import re
+import os
 from typing import List, Dict, Any, Optional, Tuple
 
 
@@ -37,20 +38,17 @@ def normalize_ingredient_name(raw_name: str) -> str:
 
 
 def get_db_connection():
-    """
-    Crée une connexion à PostgreSQL
+    # On récupère l'URL complète fournie par Railway
+    # Si elle n'existe pas, on met les accès par défaut de ta base Railway
+    db_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:OipcJXSrnnzFXeszAnAFVDncGocdRuzb@postgres.railway.internal:5432/railway')
     
-    Returns:
-        Connection object psycopg2
-    """
-    conn = psycopg2.connect(
-        host="postgres",       # Nom du container Docker
-        port=5432,             # Port PostgreSQL
-        database="airflow",    # Nom de la base
-        user="airflow",        # Username
-        password="airflow"     # Password
-    )
-    return conn
+    try:
+        # On force l'utilisation de la chaîne de connexion complète
+        conn = psycopg2.connect(db_url)
+        return conn
+    except Exception as e:
+        print(f"⚠️ Erreur critique de connexion DB : {e}")
+        return None
 
 
 def get_ingredients_data(ingredient_names: List[str]) -> List[Dict[str, Any]]:
